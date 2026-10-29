@@ -110,7 +110,9 @@ public class IoTDBv2RelationalSinkClient {
         }
 
         try {
-            tableSession.executeNonQueryStatement("create database if not exists " + database);
+            String quotedDatabase = "\"" + database.replace("\"", "\"\"") + "\"";
+            tableSession.executeNonQueryStatement(
+                    "create database if not exists " + quotedDatabase);
         } catch (IoTDBConnectionException | StatementExecutionException e) {
             log.error("Create database failed.", e);
             throw new IotdbConnectorException(

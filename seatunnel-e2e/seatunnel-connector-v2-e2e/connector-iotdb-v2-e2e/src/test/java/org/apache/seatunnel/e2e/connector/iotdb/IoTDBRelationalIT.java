@@ -109,10 +109,25 @@ public class IoTDBRelationalIT extends TestSuiteBase implements TestResource {
     @TestTemplate
     public void testIoTDBTable(TestContainer container) throws Exception {
         Container.ExecResult execResult =
-                container.executeJob("/iotdb/iotdb_source_to_sink_table.conf");
-        Assertions.assertEquals(0, execResult.getExitCode());
+                container.executeJob(
+                        "/iotdb/iotdb_source_to_sink_table.conf",
+                        Collections.singletonList("sink_database=" + SINK_DATABASE));
+        Assertions.assertEquals(0, execResult.getExitCode(), execResult.getStderr());
 
-        List<RowRecord> sinkTableDataset = readSinkTableDataset();
+        List<RowRecord> sinkTableDataset = readSinkTableDataset(SINK_DATABASE);
+        assertDatasetEquals(testTableDataSet, sinkTableDataset);
+    }
+
+    @TestTemplate
+    public void testIoTDBTableWithHyphenatedDatabase(TestContainer container) throws Exception {
+        String sinkDatabase = "test-sink-database";
+        Container.ExecResult execResult =
+                container.executeJob(
+                        "/iotdb/iotdb_source_to_sink_table.conf",
+                        Collections.singletonList("sink_database=" + sinkDatabase));
+        Assertions.assertEquals(0, execResult.getExitCode(), execResult.getStderr());
+
+        List<RowRecord> sinkTableDataset = readSinkTableDataset(sinkDatabase);
         assertDatasetEquals(testTableDataSet, sinkTableDataset);
     }
 
@@ -223,12 +238,14 @@ public class IoTDBRelationalIT extends TestSuiteBase implements TestResource {
         return rowRecords;
     }
 
-    private List<RowRecord> readSinkTableDataset()
+    private List<RowRecord> readSinkTableDataset(String sinkDatabase)
             throws IoTDBConnectionException, StatementExecutionException {
         SessionDataSet dataSet =
                 tableSession.executeQueryStatement(
                         "SELECT time, c_tag, c_attribute, c_boolean, c_tinyint, c_smallint, c_int, c_bigint, c_float, c_double, c_text, c_date, c_timestamp, c_blob FROM "
-                                + SINK_DATABASE
+                                + "\""
+                                + sinkDatabase.replace("\"", "\"\"")
+                                + "\""
                                 + ".testString");
         List<RowRecord> results = new ArrayList<>();
         while (dataSet.hasNext()) {
